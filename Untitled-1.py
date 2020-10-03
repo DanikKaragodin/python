@@ -25,14 +25,11 @@ time.sleep(1)
 #Четвертое задание
 print("Четвертое задание:")
 print('''
-AAAAA
-AAAAA
-AAAAA
-AAAAA
-AAAAA
-AAAAA
-AAAAA
-AAAAA
+AAAAAAAA
+AAAAAAAA
+AAAAAAAA
+AAAAAAAA
+AAAAAAAA
     ''')
 time.sleep(5)
 
