@@ -7,7 +7,7 @@ import argparse
 def check():
     print("Еще хотите что-то сделать?\n1.Да\n2.Нет")
     if (input("--> ") == "1"):
-        print("Перечень комманд:\n1.Добавить\n2.Удалить\n3.Что-то найти\n4.Увидеть полную базу\n000. Выйти из программы")
+        print("Перечень комманд:\n1.Добавить\n2.Изменить существующий контакт\n3.Удалить\n4.Что-то найти\n5.Увидеть полную базу\n000. Выйти из программы")
         return False
     else:
         return True
@@ -20,11 +20,33 @@ def fullBase(c):
         print(row)
 
 
+def advancedFullBase(c):
+    inputValue = input(
+        "По какому виду сортировки вам надо показать базу?\n1.По ID(стандартная)\n2.По Имени\n3.По адресу\n4.По номеру\n5.По электронной почте\n--> ")
+    if int(inputValue) == 1:
+        for row in c.execute('SELECT * FROM book '):
+            print(row)
+    elif int(inputValue) == 2:
+        for row in c.execute('SELECT * FROM book ORDER BY name'):
+            print(row)
+    elif int(inputValue) == 3:
+        for row in c.execute('SELECT * FROM book ORDER BY adress'):
+            print(row)
+    elif int(inputValue) == 4:
+        for row in c.execute('SELECT * FROM book ORDER BY number'):
+            print(row)
+    elif int(inputValue) == 5:
+        for row in c.execute('SELECT * FROM book ORDER BY email'):
+            print(row)
+    else:
+        print("Вы ввели неправльную цифру, из за этого вы ничего не увидели")
+
+
 # Парсер
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-log', '--logs', action="store_true",
-                    help="Вывод разработчика")
+                    help="Вывод данных для разработчика")
 args = parser.parse_args()
 
 # Подключение базы
@@ -56,7 +78,7 @@ if args.logs:
     print("# {} найденное количество id".format(kolvoID))
 
 
-print("Здравствуйте,что вы хотите сделать с базой данных?\n1.Добавить\n2.Удалить\n3.Что-то найти\n4.Увидеть полную базу\n000. Выйти из программы")
+print("Здравствуйте,что вы хотите сделать с базой данных?\n1.Добавить\n2.Изменить существующий контакт\n3.Удалить\n4.Что-то найти\n5.Увидеть полную базу\n000. Выйти из программы")
 # Сам процесс программы
 while exitFromProgramm == False:
     vibor = input("--> ")
@@ -72,12 +94,45 @@ while exitFromProgramm == False:
             ''' INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''', table)
         if args.logs:
             for i in c.execute('SELECT * FROM book WHERE id = ? ', (kolvoID,)):
-                print( "#Была введена строка данных:", i  )
+                print("#Была введена строка данных:", i)
         conn.commit()
 
         exitFromProgramm = check()
+# обновления контактной информации
+    elif(vibor == "2"):
+        if(input("Нужно ли вам посмотреть полную Базу? \n 1. Да \n 0. Нет\n-->") == "1"):
+            fullBase(c)
+        print("Выберете id контакта, которого вы хотите изменить")
+        idChoose = input("--> ")
+        name = input("Введите имя(нажимайте Enter если не хотите менять): ")
+        adress = input(
+            "Введите адрес(нажимайте Enter если не хотите менять): ")
+        number = input(
+            "Введите номер телефона(нажимайте Enter если не хотите менять): ")
+        email = input(
+            "Введите адрес электронной почты(нажимайте Enter если не хотите менять): ")
+        c.execute('SELECT * FROM book WHERE id = ? ', (idChoose))
+        bufferbase = c.fetchone()
+        bufferbase = list(bufferbase)
+        print(bufferbase)
+        if name != "":
+            bufferbase[1] = name
+        if adress != "":
+            bufferbase[2] = adress
+        if number != "":
+            bufferbase[3] = number
+        if email != "":
+            bufferbase[4] = email
+        if args.logs:
+            for i in c.execute('SELECT * FROM book WHERE id = ? ', (idChoose)):
+                print("#Была изменена эта строка: ", i)
+        print(bufferbase)
+        bufferbase=[tuple(bufferbase)]
+        c.executemany('''INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''',bufferbase)
+        conn.commit()
+        exitFromProgramm = check()
 # Удаление
-    elif (vibor == "2"):
+    elif (vibor == "3"):
 
         if(input("Нужно ли вам посмотреть полную Базу? \n 1. Да \n 0. Нет\n-->") == "1"):
             fullBase(c)
@@ -92,19 +147,44 @@ while exitFromProgramm == False:
         kolvoID -= 1
         exitFromProgramm = check()
 # Нахождение
-    elif (vibor == "3"):
+    elif (vibor == "4"):
         print("Какую информацию вы можете дать? Если вы не знаете что написать в одном из пунктов, то просто жмите ENTER")
         name = input("Введите имя: ")
         adress = input("Введите адрес: ")
         number = input("Введите номер телефона: ")
         email = input("Введите адрес электронной почты: ")
-        print("Вот варианты: ")
-        for row in c.execute('SELECT * FROM book WHERE (name = ? AND name != "") OR (adress = ? AND adress != "") OR (number = ? AND number != "") OR (email = ? AND email != "")  ', (name, adress, number, email)):
-            print(row)
+        findBase = []
+        for row in c.execute('SELECT * FROM book WHERE name = ? ', (name,)):
+            findBase.append(row)
+        for row in c.execute('SELECT * FROM book WHERE adress = ? ', (adress,)):
+            findBase.append(row)
+        for row in c.execute('SELECT * FROM book WHERE number = ? ', (number,)):
+            findBase.append(row)
+        for row in c.execute('SELECT * FROM book WHERE email = ? ', (email,)):
+            findBase.append(row)
+       # print("Начальный этап: ", findBase)
+      #  print("Длина: ",len(findBase))
+        if findBase != set(findBase):
+            index = 0
+            i = 0
+            FirstLen = len(findBase)
+            while i != FirstLen:
+               # print("i: ",i)
+                for n in range(len(findBase)):
+                    #print("n: ",n)
+                    if(findBase[index] == findBase[n] and index != n):
+                        index += 1
+                        break
+                    elif(n == len(findBase)):
+                        findBase.pop(index)
+                #print("index: ",index)
+                i += 1
+
+        print("Вот варианты: ", *set(findBase), sep='\n')
         exitFromProgramm = check()
 # Полная база
-    elif (vibor == "4"):
-        fullBase(c)
+    elif (vibor == "5"):
+        advancedFullBase(c)
         exitFromProgramm = check()
 # Выход + неправильный ввод
     elif (vibor == "000"):
