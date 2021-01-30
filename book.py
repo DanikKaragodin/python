@@ -1,5 +1,6 @@
 import sqlite3
 import argparse
+import sys
 
 # Проверка для выхода из программы
 
@@ -47,6 +48,18 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-log', '--logs', action="store_true",
                     help="Вывод данных для разработчика")
+parser.add_argument('-add', '--adds', action="store_true",
+                    help="Сразу проведение функции добавления")
+parser.add_argument('-delete', '--deletes', action="store_true",
+                    help="Сразу проведение функции удаления")
+parser.add_argument('-change', '--changes', action="store_true",
+                    help="Сразу проведение функции изменения")
+parser.add_argument('-find', '--finds', action="store_true",
+                    help="Сразу проведение функции нахождения")
+parser.add_argument('-watch', '--watchs', action="store_true",
+                    help="Сразу проведение функции просмотра всей базы")
+parser.add_argument('-clear', '--clears', action="store_true",
+                    help="Очистка всей базы")
 args = parser.parse_args()
 
 # Подключение базы
@@ -70,18 +83,36 @@ except(sqlite3.OperationalError):
 # Переменная помогающая для выхода из программы
 exitFromProgramm = False
 # Подсчет последнего id в таблице
-
 kolvoID = 0
 for i in c.execute('SELECT * FROM book '):
     kolvoID += 1
 if args.logs:
     print("# {} найденное количество id".format(kolvoID))
+# Очистка всей базы
+if args.clears:
+    c.execute("DELETE FROM book ")
+    print("Были удалены все данные с таблицы")
+    sys.exit()
+# Проверка был ли парсинг и надо ли исчезать строке команд
 
-
-print("Здравствуйте,что вы хотите сделать с базой данных?\n1.Добавить\n2.Изменить существующий контакт\n3.Удалить\n4.Что-то найти\n5.Увидеть полную базу\n000. Выйти из программы")
+if args.adds or args.changes or args.deletes or args.finds or args.watchs:
+    pass
+else:
+    print("Здравствуйте,что вы хотите сделать с базой данных?\n1.Добавить\n2.Изменить существующий контакт\n3.Удалить\n4.Что-то найти\n5.Увидеть полную базу\n000. Выйти из программы")
 # Сам процесс программы
 while exitFromProgramm == False:
-    vibor = input("--> ")
+    if args.adds:
+        vibor = "1"
+    elif args.changes:
+        vibor = "2"
+    elif args.deletes:
+        vibor = "3"
+    elif args.finds:
+        vibor = "4"
+    elif args.watchs:
+        vibor = "5"
+    else:
+        vibor = input("--> ")
 # Добавление
     if(vibor == "1"):
         kolvoID += 1
@@ -90,12 +121,17 @@ while exitFromProgramm == False:
         number = input("Введите номер телефона: ")
         email = input("Введите адрес электронной почты: ")
         table = [(kolvoID, name, adress, number, email)]
-        c.executemany(
-            ''' INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''', table)
-        if args.logs:
-            for i in c.execute('SELECT * FROM book WHERE id = ? ', (kolvoID,)):
-                print("#Была введена строка данных:", i)
-        conn.commit()
+        if name == "" or adress == "" or number == "" or email == "":
+            pass
+        else:
+            c.executemany(
+                ''' INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''', table)
+            if args.logs:
+                for i in c.execute('SELECT * FROM book WHERE id = ? ', (kolvoID,)):
+                    print("#Была введена строка данных:", i)
+            conn.commit()
+            if args.adds:
+                sys.exit()
 
         exitFromProgramm = check()
 # обновления контактной информации
@@ -127,9 +163,12 @@ while exitFromProgramm == False:
             for i in c.execute('SELECT * FROM book WHERE id = ? ', (idChoose)):
                 print("#Была изменена эта строка: ", i)
         print(bufferbase)
-        bufferbase=[tuple(bufferbase)]
-        c.executemany('''INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''',bufferbase)
+        bufferbase = [tuple(bufferbase)]
+        c.executemany(
+            '''INSERT OR REPLACE INTO book VALUES (?,?,?,?,?)''', bufferbase)
         conn.commit()
+        if args.changes:
+            sys.exit()
         exitFromProgramm = check()
 # Удаление
     elif (vibor == "3"):
@@ -145,6 +184,8 @@ while exitFromProgramm == False:
         c.execute('UPDATE book SET id = (id-1) WHERE id > ? ', (idChoose))
         conn.commit()
         kolvoID -= 1
+        if args.deletes:
+            sys.exit()
         exitFromProgramm = check()
 # Нахождение
     elif (vibor == "4"):
@@ -154,37 +195,65 @@ while exitFromProgramm == False:
         number = input("Введите номер телефона: ")
         email = input("Введите адрес электронной почты: ")
         findBase = []
-        for row in c.execute('SELECT * FROM book WHERE name = ? ', (name,)):
-            findBase.append(row)
-        for row in c.execute('SELECT * FROM book WHERE adress = ? ', (adress,)):
-            findBase.append(row)
-        for row in c.execute('SELECT * FROM book WHERE number = ? ', (number,)):
-            findBase.append(row)
-        for row in c.execute('SELECT * FROM book WHERE email = ? ', (email,)):
-            findBase.append(row)
-       # print("Начальный этап: ", findBase)
-      #  print("Длина: ",len(findBase))
-        if findBase != set(findBase):
-            index = 0
-            i = 0
-            FirstLen = len(findBase)
-            while i != FirstLen:
-               # print("i: ",i)
-                for n in range(len(findBase)):
-                    #print("n: ",n)
-                    if(findBase[index] == findBase[n] and index != n):
-                        index += 1
-                        break
-                    elif(n == len(findBase)):
-                        findBase.pop(index)
-                #print("index: ",index)
-                i += 1
+        for row in c.execute('SELECT * FROM book'):
+            findBase.append(list(row))
+        index = 0
+        if name != "":
+            for i in range(len(findBase)):
+                try:
 
-        print("Вот варианты: ", *set(findBase), sep='\n')
+                    bufferBase = findBase[index]
+                    if bufferBase[1] != name:
+                        findBase.pop(index)
+                        index -= 1
+                    index += 1
+                except IndexError:
+                    break
+            index = 0
+        if adress != "":
+            for i in range(len(findBase)):
+                try:
+                    bufferBase = findBase[index]
+                    if bufferBase[2] != adress:
+                        findBase.pop(index)
+                        index -= 1
+                    index += 1
+                except IndexError:
+                    break
+            index = 0
+        if number != "":
+            for i in range(len(findBase)):
+                try:
+                    bufferBase = findBase[index]
+                    if bufferBase[3] != number:
+                        findBase.pop(index)
+                        index -= 1
+                    index += 1
+                except IndexError:
+                    break
+            index = 0
+        if email != "":
+            for i in range(len(findBase)):
+                try:
+                    bufferBase = findBase[index]
+                    if bufferBase[4] != email:
+                        findBase.pop(index)
+                        index -= 1
+                    index += 1
+                except IndexError:
+                    break
+            index = 0
+        print("Вот варианты:")
+        for x in findBase:
+            print(x)
+        if args.finds:
+            sys.exit()
         exitFromProgramm = check()
 # Полная база
     elif (vibor == "5"):
         advancedFullBase(c)
+        if args.watchs:
+            sys.exit()
         exitFromProgramm = check()
 # Выход + неправильный ввод
     elif (vibor == "000"):
